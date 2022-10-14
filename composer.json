@@ -1,0 +1,10 @@
+{
+    "name": "geezywap/payscribe",
+        "autoload": {
+            "classmap": ["main.php"]
+        },
+    "minimum-stability": "dev",
+    "require": {
+        "vlucas/phpdotenv" : "v5.4.1"
+    }
+}
