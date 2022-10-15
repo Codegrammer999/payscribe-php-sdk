@@ -7,7 +7,7 @@
  
 
     #with composer
-    composer require payscribe/php-sdk
+    composer require payscribe/php-sdk:dev-main
     
 How to install composer ? click this link  https://getcomposer.org/
 
