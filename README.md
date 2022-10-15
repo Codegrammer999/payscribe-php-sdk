@@ -7,7 +7,7 @@
  
 
     #with composer
-    composer require geezywap/payscribe
+    composer require payscribe/php-sdk
     
 How to install composer ? click this link  https://getcomposer.org/
 
