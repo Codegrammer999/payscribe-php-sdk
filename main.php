@@ -12,9 +12,25 @@ class Payscribe {
     // Properties
 
 
+static function check_env(){
+if($_ENV['PAYSCRIBE_TYPE'] == null){
+    throw new Exception("Payscribe Account Type Is Required In env", 1);
+    
+}
 
+if($_ENV['PAYSCRIBE_USERNAME'] == null){
+    throw new Exception("Payscribe Username  Is Required In env", 1);  
+}
+
+if($_ENV['PAYSCRIBE_KEY'] == null){
+    throw new Exception("Payscribe Account Key Is Required In env", 1);
+}
+        
+}
 
     static function sendreq($fields,$path,$token){
+
+        self::check_env();
 if($path == "account"){
     $url = "https://www.payscribe.ng/api/account/";
 }else{
