@@ -1,5 +1,5 @@
 {
-    "name": "geezywap/payscribe",
+    "name": "payscribe/php-sdk",
         "autoload": {
             "classmap": ["main.php"]
         },
