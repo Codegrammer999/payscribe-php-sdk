@@ -2,8 +2,7 @@
     "name": "payscribe/php-sdk",
         "autoload": {
             "classmap": ["main.php"]
-        },
-    "minimum-stability": "dev",
+        }, 
     "require": {
         "vlucas/phpdotenv" : "5.5.x-dev",
         "guzzlehttp/guzzle": "7.5.x-dev"
