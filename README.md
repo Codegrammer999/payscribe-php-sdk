@@ -1,28 +1,18 @@
 
-# Payscribe php sdk documentation
-![enter image description here](https://www.payscribe.ng/assets/img/payscribe_logo.png)
 
 
- # [installation]
+### Usage
+To use the Payscribe class, you need to first create an instance of the class. You can do this by calling the `createFromEnv` method or by passing in your Payscribe API key, username, and type to the constructor.
+
+````php
+// Using the createFromEnv method
+$payscribe = Payscribe::createFromEnv();
+
+// Using the constructor
+$payscribe = new Payscribe($key, $username, $type);
+
+````
  
-
-    #with composer
-    composer require payscribe/php-sdk:dev-main
-    
-How to install composer ? click this link  https://getcomposer.org/
-
-
- 
- 
-if you are having composer error add this below to your composer.json and restart installation.
-"minimum-stability": "dev"
-
-# [Usage]
-Add configurations to .env file
-`PAYSCRIBE_KEY=apikey`
-`PAYSCRIBE_TYPE=sandbox/live`
-`PAYSCRIBE_USERNAME = payscribe_email`
-   
 your php init goes here!! :)
 
     <?php
@@ -34,15 +24,15 @@ your php init goes here!! :)
 	 
 [*User Account*]
 
-    Payscribe::Account()
+    $payscribe->account()
 [*Data Lookup*]
   
   *networks:  mtn, airtel, 9mobile, glo*
 
-    Payscribe::DataLookup("network")
+    $payscribe->dataLookup("network")
 [*Data Vending*]
 
-     Payscribe::VendData("plan","recipen","network")
+     $payscribe->vendData("plan","recipent","network")
   [*Recharge Card Pin*]
 Print recharge card pin, minimum quantity is 1 and maximum is 50,000.
 
@@ -53,7 +43,7 @@ Parameters
 -   qty(required): the quantity of pin you want to generate
 -   amount(required): Amount from NGN50, to NGN50,000
 -   display_name(optional): This is the name you want to show on the recharge card slip
-     Payscribe::Recharge("qty","amount","name")
+     $payscribe->rechargeCard("qty","amount","name")
   
   [*Fetch Recharge Card Pin*]
   
@@ -61,7 +51,7 @@ You can fetch all generated pin for a particular transaction using the transacti
 
 Parameter: trans_id( required): The trasaction ID
 
-     Payscribe::GetCards("trans_id")  
+     $payscribe->getCards("trans_id")  
   
   
   [*Validate smart card number*]
@@ -74,7 +64,7 @@ Parameters
 
 
 
-	     Payscribe::ValidateCard("trans_id")  
+	     $payscribe->validateCard("trans_id")  
 	     
   [*Vend Multichoice - GOTV, DSTV*]
   
@@ -88,7 +78,7 @@ Parameters
 -   productToken(required): The token received when validating the iuc number
 -   trans_id (optional): your transaction id, which you can use as reference later on    
 
-	    Payscribe::MultichoicePay("plan","productCode","phone_number","productToken","trans_id") 
+	    $payscribe->multichoicePay("plan","productCode","phone_number","productToken","trans_id") 
 
 [*Validate startimes smart card number*]
 Validate startimes smart card number to get bouquet and customer details before vending
@@ -98,7 +88,7 @@ Parameters
 -   account(required): The iuc number you are validating
 -   amount(required): the amount you are paying
 	 
-	    Payscribe::StartimesValidate("type","account")
+	    $payscribe->startimesValidate("type","account")
 	
 [*Vend Startimes*]
 Make payment for startimes
@@ -112,14 +102,14 @@ Parameters
 -   productToken(required): as seen on the validation endpoint
 -   trans_id(optional): your reference id
 
-		   Payscribe::StartimesVend("bouquet","circle","productCode","phone","productToken","trans_id")
+		   $payscribe->startimesVend("bouquet","circle","productCode","phone","productToken","trans_id")
 
 [*Airtime to Wallet*]
 You may need to get fetch the available networks and our current rate before sending the airtime
 
 Please note that wallet will only be credited when the airtime is received.
 
-    Payscribe::ATWLookup()
+    $payscribe->atwLookup()
 
 [*Process Airtime to Wallet*]
 Airtime to wallet.
@@ -133,7 +123,7 @@ Parameters
 -   from (required): The phone number you are sending it from
 -   amount(required): The amount you are sending. Minimum of NGN500 And maximum of NGN20,000 per transaction
 
-	     Payscribe::ATWProcess("network","amount","phone","from")
+	     $payscribe->atwProcess("network","amount","phone","from")
 [*Validate Electricity*]
 
 Validate electricity
@@ -147,7 +137,7 @@ Parameters
 
  
 
-		  Payscribe::ValidateElectricity("number","type","amount","service")
+		  $payscribe->validateElectricity("number","type","amount","service")
 [*Pay Electricity*]
 Pay electricity bill
 
@@ -156,7 +146,7 @@ Parameters
 -   productCode(required): The product code as seen when validating
 -   productToken(required): The productToken as seen when validating.
 
-	      Payscribe::ElectricityVend("productCode","productToken")
+	      $payscribe->electricityVend("productCode","productToken")
 [*Vend Airtime*]
 
 Purchase airtime (Glo, Mtn, Airtel, 9mobile)
@@ -169,5 +159,5 @@ Parameters
 -   ported(optional): set to true if the number is a ported number.
   
 
-		Payscribe::VendAirtime("network","amount","recipent")
-# php-sdk
+		$payscribe->vendAirtime("network","amount","recipent")
+

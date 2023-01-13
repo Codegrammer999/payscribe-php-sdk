@@ -1,141 +1,231 @@
 <?php
 require __DIR__."/vendor/autoload.php";
-try{
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-$dotenv->load();
-}catch(\Exception  $e){
-    return ".env missing , or payscribe config not found!!";
-}
 
+use Dotenv\Dotenv;
+use GuzzleHttp\Client;
 
 class Payscribe {
     // Properties
+    const SANDBOX_URL = 'https://www.payscribe.ng/sandbox';
+    const LIVE_URL = 'https://www.payscribe.ng/api/v1';
+    const ACCOUNT_URL = 'https://www.payscribe.ng/api/account';
+    const ENV_REQUIRED = [
+        'PAYSCRIBE_KEY',
+        'PAYSCRIBE_USERNAME',
+        'PAYSCRIBE_TYPE'
+    ];
 
+    /**
+     * @var string
+     */
+    private $key;
 
-static function check_env(){
-if($_ENV['PAYSCRIBE_TYPE'] == null){
-    throw new Exception("Payscribe Account Type Is Required In env", 1);
-    
-}
+    /**
+     * @var string
+     */
+    private $username;
 
-if($_ENV['PAYSCRIBE_USERNAME'] == null){
-    throw new Exception("Payscribe Username  Is Required In env", 1);  
-}
+    /**
+     * @var string
+     */
+    private $type;
 
-if($_ENV['PAYSCRIBE_KEY'] == null){
-    throw new Exception("Payscribe Account Key Is Required In env", 1);
-}
-        
-}
+    /**
+     * Payscribe constructor.
+     *
+     * @param string $key
+     * @param string $username
+     * @param string $type
+     */
+    public function __construct(string $key, string $username, string $type)
+    {
+        $this->key = $key;
+        $this->username = $username;
+        $this->type = $type;
+    }
 
-    static function sendreq($fields,$path,$token){
+    /**
+     * @return Payscribe
+     * @throws PayscribeEnvMissingException
+     */
+    public static function createFromEnv(): Payscribe
+    {
+        $dotenv = Dotenv::createImmutable(__DIR__);
+        $dotenv->load();
 
-        self::check_env();
-if($path == "account"){
-    $url = "https://www.payscribe.ng/api/account/";
-}else{
-
-        if($_ENV['PAYSCRIBE_TYPE'] == "sandbox"){
-            $url = "https://www.payscribe.ng/sandbox/$path";
+        foreach (self::ENV_REQUIRED as $var) {
+            if (!isset($_ENV[$var])) {
+                throw new PayscribeEnvMissingException("Missing environment variable: {$var}");
+            }
         }
-    
-    if($_ENV['PAYSCRIBE_TYPE'] == "live"){
-            $url =  "https://www.payscribe.ng/api/v1/$path";
+
+        return new self(
+            $_ENV['PAYSCRIBE_KEY'],
+            $_ENV['PAYSCRIBE_USERNAME'],
+            $_ENV['PAYSCRIBE_TYPE']
+        );
+    }
+
+    /**
+     * Send request to Payscribe API
+     *
+     * @param string $path
+     * @param array $data
+     *
+     * @return array
+     *
+     * @throws PayscribeApiException
+     */
+    private function sendRequest(string $path, array $data): array
+    {
+        $client = new Client();
+
+        $options = [
+            'json' => $data,
+            'headers' => [
+                'Authorization' => 'Bearer ' . $this->key,
+                'Cache-Control' => 'no-cache',
+            ],
+        ];
+
+        try {
+            $url = $this->getApiUrl($path);
+            $response = $client->post($url, $options);
+            $result = json_decode((string) $response->getBody(), true);
+            if ($response->getStatusCode() !== 200) {
+                throw new PayscribeApiException($result['message'] ?? 'An unknown error occurred');
+            }
+
+            return $result;
+        } catch (GuzzleHttp\Exception\RequestException $e) {
+            throw new PayscribeApiException($e->getMessage());
         }
-}
-
-  $fields_string = json_encode($fields);
-
-  //open connection
-  $ch = curl_init();
-
-  //set the url, number of POST vars, POST data
-  curl_setopt($ch,CURLOPT_URL, $url);
-  curl_setopt($ch,CURLOPT_POST, true);
-  curl_setopt($ch,CURLOPT_POSTFIELDS, $fields_string);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-      "Authorization: Bearer $token",
-      "Cache-Control: no-cache",
-  ));
-
-    //So that curl_exec returns the contents of the cURL; rather than echoing it
-    curl_setopt($ch,CURLOPT_RETURNTRANSFER, true); 
-
-    //execute post
-    $result = curl_exec($ch);
-    return json_decode($result);
-}
-
-    static  function Account(){
-
-        $data =["username"=>$_ENV['PAYSCRIBE_USERNAME']];
-
-        $url = "account";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
     }
 
+    /**
+     * Get the API URL for the given path
+     *
+     * @param string $path
+     *
+     * @return string
+     */
+    private function getApiUrl(string $path): string
+    {
+        if ($path === 'account') {
+            return self::ACCOUNT_URL;
+        }
 
+        if ($this->type === 'sandbox') {
+            return self::SANDBOX_URL . '/' . $path;
+        }
 
-
-    static function DataLookup($network){
-        $data =["network"=>$network];
-
-        $url = "data/lookup";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return self::LIVE_URL . '/' . $path;
     }
-    
-    static function VendData($plan,$recipent,$network){
-        $data =["plan"=>$plan,"recipent"=>$recipent,"network"=>$network];
 
-        $url = "data/vend";
-
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
-
+    /**
+     * Get account information
+     *
+     * @return array
+     */
+    public function account(): array
+    {
+        return $this->sendRequest('account', [
+            'username' => $this->username,
+        ]);
     }
-    
-    static function RechargeCard($qty,$amount,$name){
-        $data =["qty"=>$qty,"amount"=>$amount,"display_name"=>$amount];
 
-        $url = "rechargecard";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+    /**
+     * Lookup data for a given network
+     *
+     * @param string $network
+     *
+     * @return array
+     */
+    public function dataLookup(string $network): array
+    {
+        return $this->sendRequest('data/lookup', [
+            'network' => $network,
+        ]);
     }
-    
-    
-    static function GetCards($trans_id){
-        $data =["trans_id"=>$trans_id];
 
-        $url = "rechargecardpins";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+    /**
+     * Vend data for a given plan, recipient and network
+     *
+     * @param string $plan
+     * @param string $recipient
+     * @param string $network
+     *
+     * @return array
+     */
+    public function vendData(string $plan, string $recipient, string $network): array
+    {
+        return $this->sendRequest('data/vend', [
+            'plan' => $plan,
+            'recipient' => $recipient,
+            'network' => $network,
+        ]);
     }
-    
-    
-    static function ValidateCard($type,$no){
+
+    /**
+     * Recharge card
+     *
+     * @param int $qty
+     * @param int $amount
+     * @param string $name
+     *
+     * @return array
+     */
+    public function rechargeCard(int $qty, int $amount, string $name): array
+    {
+        return $this->sendRequest('rechargecard', [
+            'qty' => $qty,
+            'amount' => $amount,
+            'display_name' => $name,
+        ]);
+    }
+
+    /**
+     * Get cards
+     *
+     * @param string $trans_id
+     *
+     * @return array
+     */
+    public function getCards(string $trans_id): array
+    {
+        return $this->sendRequest('cards', [
+            'trans_id' => $trans_id,
+        ]);
+    }
+
+    public  function validateCard(string $type,string $no): array
+    {
         $data =["type"=>$type,"account"=>$no];
-
         $url = "multichoice/validate";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return $this->sendRequest($url,$data);
     }
     
-    static function MultichoicePay($plan,$code,$phone,$token,$trans_id){
+    public  function multichoicePay(string $plan,string $code,string $phone,string $token,string $trans_id): array
+    {
         $data =["plan"=>$plan,
                 "productCode"=>$code,
                 "phone"=>$phone,
                 "productToken"=>$token,
                 "trans_id"=>$trans_id 
                ];
-
         $url = "multichoice/vend";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return $this->sendRequest($url,$data);
     }
     
-    static function StartimesValidate($no,$amount){
+    public  function startimesValidate(string $no,string $amount): array
+    {
         $data =["account"=>$no,"amount"=>$amount];
-
         $url = "startimes/validate";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return $this->sendRequest($url,$data);
     }
     
-    static function StartimesVend($no,$amount,$pcode,$Pcode,$phone,$name,$tid){
+    public  function startimesVend(string $no,string $amount,string $pcode,string $Pcode,string $phone,string $name,string $tid): array
+    {
         $data =[ 
                 "smart_card_no"=>$no,
                 "amount"=>$amount,
@@ -145,48 +235,52 @@ if($path == "account"){
                 "customer_name"=>$name,
                 "transaction_id"=>$tid
                ];
-
         $url = "startimes/vend";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return $this->sendRequest($url,$data);
     }
     
-    static function ATWLookup(){
+    public  function atwLookup(): array
+    {
         $data = [];
         $url = "airtime_to_wallet";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return $this->sendRequest($url,$data);
     }
     
-    static function ATWProcess($network,$amount,$phone,$from){
+    public  function atwProcess(string $network,string $amount,string $phone,string $from): array
+    {
         $data =["network"=>$network,"amount"=>$amount,"phone_number"=>$phone,"from"=>$from];
-
         $url = "airtime_to_wallet/vend";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return $this->sendRequest($url,$data);
     }
     
-    static function VendAirtime($network,$amount,$recipent){
+    public  function vendAirtime(string $network,string $amount,string $recipent): array
+    {
         $data =["network"=>$network,"amount"=>$amount,"recipent"=>$recipent,"ported"=>false];
-
         $url = "airtime";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return $this->sendRequest($url,$data);
     }
     
-    
-    static function ValidateElectricity($number,$type,$amount,$service){
+    public  function validateElectricity(string $number,string $type,string $amount,string $service): array
+    {
         $data =["meter_number"=>$number,"meter_type"=>$type,"amount"=>$amount,"service"=>$service];
-
         $url = "electricity/validate";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return $this->sendRequest($url,$data);
     }
 
-    
-    
-    static function ElectricityVend($productCode,$productToken,$phone){
+    public  function electricityVend(string $productCode,string $productToken,string $phone): array
+    {
         $data =["productCode"=>$productCode,"productToken"=>$productToken,"phone"=>$phone];
-
         $url = "electricity/vend";
-        return self::sendreq($data,$url,$_ENV['PAYSCRIBE_KEY']);
+        return $this->sendRequest($url,$data);
     }
+}
 
 
 
+class PayscribeEnvMissingException extends \Exception
+{
+}
+
+class PayscribeApiException extends \Exception
+{
 }

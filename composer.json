@@ -5,6 +5,7 @@
         },
     "minimum-stability": "dev",
     "require": {
-        "vlucas/phpdotenv" : "v5.4.1"
+        "vlucas/phpdotenv" : "5.5.x-dev",
+        "guzzlehttp/guzzle": "7.5.x-dev"
     }
 }

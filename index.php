@@ -1,7 +1,9 @@
 <?php
 require __DIR__."/vendor/autoload.php";
- 
 
- // your code
 
-var_dump(Payscribe::DataLookup("glo"));
+
+$payscribe = Payscribe::createFromEnv();
+$result = $payscribe->account();
+
+var_dump($result);
