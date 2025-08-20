@@ -4,7 +4,7 @@
             "classmap": ["main.php"]
         }, 
     "require": {
-        "vlucas/phpdotenv" : "5.5.x-dev",
+        "vlucas/phpdotenv": "^5.5 || ^5.6",
         "guzzlehttp/guzzle": "7.5.x-dev"
     }
 }
